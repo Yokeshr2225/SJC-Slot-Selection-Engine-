@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SJC BGMI TOURNAMENT </title>
+<title>SJC TOURNAMENT SLOT SELECTION </title>
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
@@ -58,11 +58,13 @@ justify-content:space-between;
 border-radius:5px;
 }
 
+/* SMOOTH SPIN */
 canvas{
 width:90%;
 max-width:350px;
 margin:auto;
-transition: transform 2s ease-out;
+display:block;
+transition: transform 4s cubic-bezier(.17,.67,.32,1.34);
 }
 
 .arrow{
@@ -74,18 +76,22 @@ border-top:25px solid gold;
 margin:auto;
 }
 
+/* POPUP */
 .popup{
 display:none;
 position:fixed;
 top:50%;
 left:50%;
-transform:translate(-50%,-50%) scale(0.5);
+transform:translate(-50%,-50%) scale(0.8);
 background:#e63946;
-padding:20px 40px;
+padding:25px 45px;
 font-size:26px;
 border-radius:12px;
 transition:0.3s;
+z-index:9999;
+text-align:center;
 }
+
 .popup.show{
 display:block;
 transform:translate(-50%,-50%) scale(1);
@@ -113,7 +119,7 @@ font-weight:bold;
 
 <body onclick="enableSound()">
 
-<h1>SJC TOURNAMENT SLOT SELECTION </h1>
+<h1>SJC COMMUNITY MATCHUP ENGINE</h1>
 
 <div class="container" id="setup">
 <textarea id="names" placeholder="Enter players (one per line)"></textarea><br>
@@ -128,10 +134,9 @@ font-weight:bold;
 <div class="arrow"></div>
 <canvas id="wheelCanvas" width="350" height="350"></canvas>
 <h3>Remaining: <span id="remain"></span></h3>
+
 <button onclick="spin()">SPIN</button>
 <button onclick="reset()">RESET</button>
-
-<!-- NEW EXPORT BUTTON -->
 <button onclick="exportResults()">EXPORT RESULTS</button>
 
 <div id="slots"></div>
@@ -204,6 +209,7 @@ drawWheel();
 
 function drawWheel(){
 if(players.length==0) return;
+
 let angle=2*Math.PI/players.length;
 ctx.clearRect(0,0,350,350);
 
@@ -225,6 +231,7 @@ ctx.restore();
 });
 }
 
+/* SMOOTH + EXACT SPIN */
 function spin(){
 
 if(players.length==0) return;
@@ -233,14 +240,20 @@ let s=document.getElementById("spinSound");
 s.currentTime=0;
 s.play().catch(()=>{});
 
-let spinAmount=Math.random()*720+720;
-rotation+=spinAmount;
-canvas.style.transform=`rotate(${rotation}deg)`;
-
-setTimeout(()=>{
+let anglePerPlayer=360/players.length;
 
 let index=Math.floor(Math.random()*players.length);
 let selected=players[index];
+
+let stopAngle=360-(index*anglePerPlayer)-(anglePerPlayer/2);
+
+let spinRounds=5;
+
+rotation+=(spinRounds*360)+stopAngle;
+
+canvas.style.transform=`rotate(${rotation}deg)`;
+
+setTimeout(()=>{
 
 showPopup(selected);
 
@@ -249,46 +262,77 @@ players.splice(index,1);
 drawWheel();
 
 if(currentSlot.length==2){
+
 slots.push(currentSlot);
 currentSlot=[];
 showSlots();
 
 document.getElementById("popSound").play().catch(()=>{});
 
+/* CENTER CONFETTI */
 confetti({
 particleCount:200,
 spread:120,
-origin:{y:0.7}
+origin:{x:0.5,y:0.6}
 });
+
 }
 
 document.getElementById("remain").innerText=players.length;
 
-},2000);
+},4000);
 }
 
 function showPopup(name){
+
 let pop=document.getElementById("popup");
-pop.innerHTML="SELECTED<br>"+name;
+
+pop.innerHTML=`
+<div style="font-size:24px;margin-bottom:10px;">SELECTED</div>
+<div style="font-size:28px;font-weight:bold;">${name}</div>
+<br>
+<button onclick="closePopup()">OK</button>
+`;
+
 pop.classList.add("show");
 
 document.getElementById("popSound").play().catch(()=>{});
 
+/* CENTER CONFETTI */
 confetti({
 particleCount:150,
-spread:90,
-origin:{y:0.6}
+spread:100,
+origin:{x:0.5,y:0.5}
 });
 
-setTimeout(()=>pop.classList.remove("show"),2000);
+setTimeout(()=>{closePopup();},5000);
+}
+
+function closePopup(){
+document.getElementById("popup").classList.remove("show");
 }
 
 function showSlots(){
+
 let html="";
+
 slots.forEach((s,i)=>{
-html+=`<div class="slotCard">TEAM ${i+1}<br>${s[0]} <span class="vs">VS</span> ${s[1]}</div>`;
+html+=`<div class="slotCard" id="team${i}">
+TEAM ${i+1}<br>
+${s[0]} <span class="vs">VS</span> ${s[1]}
+</div>`;
 });
+
 document.getElementById("slots").innerHTML=html;
+
+let lastTeam=document.getElementById("team"+(slots.length-1));
+
+if(lastTeam){
+lastTeam.scrollIntoView({
+behavior:"smooth",
+block:"center"
+});
+}
 }
 
 function exportResults(){
